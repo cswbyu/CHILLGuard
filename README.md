@@ -69,7 +69,7 @@ The taxonomy covers **5 macro-categories** and **31 micro-categories**:
 | D. Infringement of Legitimate Rights and Interests     | 7       |
 | E. Failure to Meet Safety Demands of Specific Services | 2       |
 
-Full definitions of all 31 micro-categories are provided in **Appendix B** of the paper.
+Full definitions of all 31 micro-categories are provided in **Appendix A** of the paper.
 
 ## 🚀 Quick Start
 
