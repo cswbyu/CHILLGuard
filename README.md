@@ -1,8 +1,6 @@
 <div align="center">
 
-# CHILLGuard
-
-**Towards Fine-Grained Chinese LLM Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment**
+# CHILLGuard: Towards Fine-Grained Chinese LLM Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment
 
 [![arXiv](https://img.shields.io/badge/arXiv-2606.15396-b31b1b.svg)](https://arxiv.org/abs/2606.15396)
 [![Findings of EMNLP 2026](https://img.shields.io/badge/Findings%20of%20EMNLP%202026-blue)](https://arxiv.org/abs/2606.15396)
@@ -33,14 +31,11 @@ We introduce a **5-macro, 31-micro** category fine-grained risk taxonomy for Chi
 
 🏆 **State-of-the-Art Performance:** SOTA across all three parameter scales (1.7B/4B/8B) on CHILLGuardTest, with strong parameter efficiency.
 
-<div align="center">
-  <img src="assets/Dataset_Construction.png" width="90%">
-  <p><i>The multi-stage data construction pipeline.</i></p>
-</div>
+## Pipeline
 
 <div align="center">
-  <img src="assets/Training_Framework.png" width="90%">
-  <p><i>The generator–classifier collaborative training framework.</i></p>
+  <img src="assets/Dataset_Construction.png" width="49%">
+  <img src="assets/Training_Framework.png" width="49%">
 </div>
 
 ## 🤖 Models
