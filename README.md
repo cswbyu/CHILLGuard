@@ -34,8 +34,8 @@ We introduce a **5-macro, 31-micro** category fine-grained risk taxonomy for Chi
 ## Pipeline
 
 <div align="center">
-  <img src="assets/Dataset_Construction.png" width="49%">
-  <img src="assets/Training_Framework.png" width="49%">
+  <img src="assets/Dataset_Construction.png" width="100%">
+  <img src="assets/Training_Framework.png" width="100%">
 </div>
 
 ## 🤖 Models
