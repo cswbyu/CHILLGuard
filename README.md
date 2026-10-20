@@ -31,7 +31,7 @@ We introduce a **5-macro, 31-micro** category fine-grained risk taxonomy for Chi
 
 🏆 **State-of-the-Art Performance:** SOTA across all three parameter scales (1.7B/4B/8B) on CHILLGuardTest, with strong parameter efficiency.
 
-## Pipeline
+## 🏗️ Pipeline
 
 <div align="center">
   <img src="assets/Dataset_Construction.png" width="100%">
@@ -55,7 +55,7 @@ CHILLGuard establishes SOTA results across all three parameter scales on CHILLGu
 | CHILLGuardTest             | Benchmark       | 51,745  | Full 31-micro taxonomy                  | 🤗 [Hugging Face](https://huggingface.co/datasets/cswbyu/CHILLGuardTest) |
 | CHILLGuardTrain-Subset-15K | Training Subset | 15,500  | 31 categories × (250 safe + 250 unsafe) | 🤗 [Hugging Face](https://huggingface.co/datasets/cswbyu/CHILLGuardTrain-Subset-15K) |
 
-The full training set **CHILLGuardTrain** (405,007 samples) is described in the paper.
+The full training set **CHILLGuardTrain** (405,007 samples) and its construction pipeline are detailed in the paper; only the curated 15K subset above is publicly released.
 
 ## 🗂️ Taxonomy
 
