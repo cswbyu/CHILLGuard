@@ -23,9 +23,9 @@ Malicious content generated from large language models (LLMs) could pose severe 
 
 We introduce a **5-macro, 31-micro** category fine-grained risk taxonomy for Chinese scenarios, and build **CHILLGuard**: a dedicated Chinese LLM content safety guardrail. To address the critical scarcity of high-quality annotated Chinese safety data, we propose a scalable multi-stage data construction pipeline: we expand multi-source corpus via **retrieval-augmented generation (RAG)**, generate implicit harmful samples through **prompt-engineering (PE) rewriting**, and refine high-quality data via **multi-model voting-based label calibration**. We then train CHILLGuard on CHILLGuardTrain under a generator-classifier collaborative framework via **Model-aware Direct Preference Optimization (MDPO)**.
 
-🗂️ **Fine-Grained Chinese Taxonomy:** a 5-macro / 31-micro risk taxonomy aligned with Chinese regulations and linguistic characteristics, covering implicit expressions, homophones, allusions, and euphemisms.
+🏷️ **Fine-Grained Chinese Taxonomy:** a 5-macro / 31-micro risk taxonomy aligned with Chinese regulations and linguistic characteristics, covering implicit expressions, homophones, allusions, and euphemisms.
 
-🏗️ **Scalable Data Construction:** a multi-stage pipeline that expands multi-source corpora via retrieval-augmented generation, rewrites implicit harmful samples through prompt engineering, and calibrates labels via multi-model voting.
+🛠️ **Scalable Data Construction:** a multi-stage pipeline that expands multi-source corpora via retrieval-augmented generation, rewrites implicit harmful samples through prompt engineering, and calibrates labels via multi-model voting.
 
 🔄 **Model-aware Preference Alignment:** a generator–classifier collaborative loop where preference pairs are derived from the live guardrail's own errors, with MDPO's model-aware dynamic KL penalty.
 
@@ -124,7 +124,7 @@ outputs = llm.generate(chat_prompts, SamplingParams(temperature=0, max_tokens=10
 
 > **Note**: the bundled chat template relies on the `enable_thinking` argument, which only takes effect in **transformers ≥ 5.x**. Always pass `enable_thinking=False`; on older versions it is silently ignored and classification degrades.
 
-## 📊 Data Format
+## 🗃️ Data Format
 
 All pipeline stages exchange JSONL files with the following schemas:
 
