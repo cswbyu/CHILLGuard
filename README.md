@@ -7,7 +7,7 @@
 [![Hugging Face Collection](https://img.shields.io/badge/%F0%9F%A4%97-Collection-yellow)](https://huggingface.co/collections/cswbyu/chillguard-6ad50b4a73e4618df64b8316)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
-🤗 <a href="https://huggingface.co/collections/cswbyu/chillguard-6ad50b4a73e4618df64b8316"><b>Hugging Face</b></a>&nbsp; | &nbsp;📄 <a href="https://arxiv.org/abs/2606.15396"><b>arXiv</b></a>&nbsp; | &nbsp;🧪 <a href="https://huggingface.co/datasets/cswbyu/CHILLGuardTest"><b>Benchmark</b></a>&nbsp; | &nbsp;💻 <a href="https://github.com/cswbyu/CHILLGuard"><b>Code</b></a>
+🤗 <a href="https://huggingface.co/collections/cswbyu/chillguard-6ad50b4a73e4618df64b8316"><b>Hugging Face</b></a>&nbsp; | &nbsp;📄 <a href="https://arxiv.org/abs/2606.15396"><b>arXiv</b></a>&nbsp; | &nbsp;🧪 <a href="https://huggingface.co/datasets/cswbyu/CHILLGuardTest"><b>Benchmark</b></a>&nbsp; | &nbsp;💻 <a href="https://github.com/cswbyu/CHILLGuard"><b>Code</b></a>&nbsp; | &nbsp;🧭 <a href="https://modelscope.cn/organization/cswbyu"><b>ModelScope</b></a>
 
 </div>
 
@@ -42,9 +42,9 @@ We introduce a **5-macro, 31-micro** category fine-grained risk taxonomy for Chi
 
 | Model           | Type         | Base Model | Params | Overall F1 (CHILLGuardTest) | Download |
 | --------------- | ------------ | ---------- | ------ | --------------------------- | -------- |
-| CHILLGuard-1.7B | Safety Guard | Qwen3-1.7B | 1.7B   | 82.72                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-1.7B) |
-| CHILLGuard-4B   | Safety Guard | Qwen3-4B   | 4B     | 89.43                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-4B) |
-| CHILLGuard-8B   | Safety Guard | Qwen3-8B   | 8B     | **89.77**                   | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-8B) |
+| CHILLGuard-1.7B | Safety Guard | Qwen3-1.7B | 1.7B   | 82.72                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-1.7B) · [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-1.7B) |
+| CHILLGuard-4B   | Safety Guard | Qwen3-4B   | 4B     | 89.43                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-4B) · [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-4B) |
+| CHILLGuard-8B   | Safety Guard | Qwen3-8B   | 8B     | **89.77**                   | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-8B) · [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-8B) |
 
 CHILLGuard establishes SOTA results across all three parameter scales on CHILLGuardTest. The 8B variant reaches an overall F1 of **89.77**, surpassing the second-best baseline (Qwen3Guard-8B-Strict, 77.44) by a relative improvement of **15.92%**.
 
@@ -52,8 +52,8 @@ CHILLGuard establishes SOTA results across all three parameter scales on CHILLGu
 
 | Dataset                    | Type            | Samples | Description                             | Download |
 | -------------------------- | --------------- | ------- | --------------------------------------- | -------- |
-| CHILLGuardTest             | Benchmark       | 51,745  | Full 31-micro taxonomy                  | 🤗 [Hugging Face](https://huggingface.co/datasets/cswbyu/CHILLGuardTest) |
-| CHILLGuardTrain-Subset-15K | Training Subset | 15,500  | 31 categories × (250 safe + 250 unsafe) | 🤗 [Hugging Face](https://huggingface.co/datasets/cswbyu/CHILLGuardTrain-Subset-15K) |
+| CHILLGuardTest             | Benchmark       | 51,745  | Full 31-micro taxonomy                  | 🤗 [Hugging Face](https://huggingface.co/datasets/cswbyu/CHILLGuardTest) · [ModelScope](https://modelscope.cn/datasets/cswbyu/CHILLGuardTest) |
+| CHILLGuardTrain-Subset-15K | Training Subset | 15,500  | 31 categories × (250 safe + 250 unsafe) | 🤗 [Hugging Face](https://huggingface.co/datasets/cswbyu/CHILLGuardTrain-Subset-15K) · [ModelScope](https://modelscope.cn/datasets/cswbyu/CHILLGuardTrain-Subset-15K) |
 
 The full training set **CHILLGuardTrain** (405,007 samples) and its construction pipeline are detailed in the paper; only the curated 15K subset above is publicly released.
 
