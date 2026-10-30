@@ -251,32 +251,33 @@ If you find this work useful, please cite:
 
 ```bibtex
 @inproceedings{yu-etal-2026-chillguard,
-    title = "{CHILLG}uard: Towards Fine-Grained {C}hinese {LLM} Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment",
-    author = "Yu, Wenbo  and
-      Wang, Bohua  and
-      Fang, Hao  and
-      Gao, Kuofeng  and
-      Zeng, Jingru  and
-      Yang, Xiaochen  and
-      Zhang, Tianyi  and
-      Ma, Xiaoxiao  and
-      Kong, Jiawei  and
-      Wu, Hao  and
-      Chen, Bin  and
-      Xia, Shu-Tao  and
-      Zhang, Min",
-    editor = "Lee, Hung-Yi  and
-      Dev, Sunipa  and
-      Li, Jessy  and
-      Elliott, Desmond",
-    booktitle = "Findings of the {A}ssociation for {C}omputational {L}inguistics: {EMNLP} 2026",
-    month = oct,
-    year = "2026",
-    address = "Budapest, Hungary",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2026.findings-emnlp.1721/",
-    doi = "10.18653/2026.findings-emnlp.1721",
-    pages = "36802--36827",
-    ISBN = "979-8-89176-462-0"
+  title     = "{CHILLG}uard: Towards Fine-Grained {C}hinese {LLM} Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment",
+  author    = "Yu, Wenbo  and
+             Wang, Bohua  and
+             Fang, Hao  and
+             Gao, Kuofeng  and
+             Zeng, Jingru  and
+             Yang, Xiaochen  and
+             Zhang, Tianyi  and
+             Ma, Xiaoxiao  and
+             Kong, Jiawei  and
+             Wu, Hao  and
+             Chen, Bin  and
+             Xia, Shu-Tao  and
+             Zhang, Min",
+  editor    = "Lee, Hung-Yi  and
+             Dev, Sunipa  and
+             Li, Jessy  and
+             Elliott, Desmond",
+  booktitle = "Findings of the {A}ssociation for {C}omputational {L}inguistics: {EMNLP} 2026",
+  month     = oct,
+  year      = "2026",
+  address   = "Budapest, Hungary",
+  publisher = "Association for Computational Linguistics",
+  url       = "https://aclanthology.org/2026.findings-emnlp.1721/",
+  doi       = "10.18653/2026.findings-emnlp.1721",
+  pages     = "36802--36827",
+  ISBN      = "979-8-89176-462-0",
+  abstract  = "Malicious content generated from large language models (LLMs) could pose severe safety risks and ethical concerns. While existing LLM safety guardrails excel in English or multilingual settings, they lack adaptation to Chinese-specific regulatory policies, cultural context, and linguistic nuances, failing to support fine-grained risk classification for diverse deployment needs. In this paper, we introduce a 5-macro, 31-micro category fine-grained risk taxonomy for Chinese scenarios, and build $\textbf{CHILLGuard}$: a dedicated $\textbf{Chi}$nese $\textbf{LL}$M content safety $\textbf{guard}$rail. To address the critical scarcity of high-quality annotated Chinese safety data, we propose a scalable multi-stage data construction pipeline: we expand multi-source corpus via retrieval-augmented generation, generate implicit harmful samples through prompt engineering rewriting, and refine high-quality data via multi-model voting-based label calibration. Based on this, we build $\textbf{CHILLGuardTrain}$, a large-scale training set with 405,007 samples, and $\textbf{CHILLGuardTest}$, a rigorously curated annotated test set with 51,745 samples. We then train CHILLGuard on CHILLGuardTrain under a generator-classifier collaborative framework via Model-aware Direct Preference Optimization. Extensive experiments under multiple settings demonstrate the state-of-the-art performance of CHILLGuard, e.g., a 15.92{\%} relative improvement of F1 score over Qwen3Guard-8B-Strict on our benchmark. We release our resources at https://github.com/cswbyu/CHILLGuard."
 }
 ```
