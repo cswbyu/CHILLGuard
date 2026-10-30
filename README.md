@@ -2,9 +2,7 @@
 
 # CHILLGuard: Towards Fine-Grained Chinese LLM Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment
 
-[![arXiv](https://img.shields.io/badge/arXiv-2606.15396-b31b1b.svg)](https://arxiv.org/abs/2606.15396)
-[![Findings of EMNLP 2026](https://img.shields.io/badge/Findings%20of%20EMNLP%202026-blue)](https://arxiv.org/abs/2606.15396)
-[![Hugging Face Collection](https://img.shields.io/badge/%F0%9F%A4%97-Collection-yellow)](https://huggingface.co/collections/cswbyu/chillguard-6ad50b4a73e4618df64b8316)
+[![Findings of EMNLP 2026](https://img.shields.io/badge/Findings%20of%20EMNLP%202026-blue)](https://aclanthology.org/2026.findings-emnlp.1721/)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 🤗 <a href="https://huggingface.co/collections/cswbyu/chillguard-6ad50b4a73e4618df64b8316"><b>Hugging Face</b></a>&nbsp; | &nbsp;📄 <a href="https://arxiv.org/abs/2606.15396"><b>arXiv</b></a>&nbsp; | &nbsp;🧪 <a href="https://huggingface.co/datasets/cswbyu/CHILLGuardTest"><b>Benchmark</b></a>&nbsp; | &nbsp;💻 <a href="https://github.com/cswbyu/CHILLGuard"><b>Code</b></a>&nbsp; | &nbsp;🧭 <a href="https://modelscope.cn/organization/cswbyu"><b>ModelScope</b></a>
@@ -13,7 +11,7 @@
 
 ## 📰 News
 
-- **[2026/10]** All resources released on Hugging Face: 3 guardrail models, the **CHILLGuardTest** benchmark (51,745 samples), and a curated 15K training subset.
+- **[2026/10]** All resources released on **Hugging Face** and **ModelScope**: 3 guardrail models, the **CHILLGuardTest** benchmark (51,745 samples), and a curated 15K training subset.
 - **[2026/08]** Accepted to **Findings of EMNLP 2026**.
 - **[2026/06]** Paper released on arXiv.
 
@@ -252,13 +250,33 @@ We thank the authors of [Qwen3](https://github.com/QwenLM/Qwen3), [vLLM](https:/
 If you find this work useful, please cite:
 
 ```bibtex
-@misc{yu2026chillguard,
-      title={CHILLGuard: Towards Fine-Grained Chinese LLM Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment},
-      author={Wenbo Yu and Bohua Wang and Hao Fang and Kuofeng Gao and Jingru Zeng and Xiaochen Yang and Tianyi Zhang and Xiaoxiao Ma and Jiawei Kong and Hao Wu and Bin Chen and Shu-Tao Xia and Min Zhang},
-      year={2026},
-      eprint={2606.15396},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2606.15396}
+@inproceedings{yu-etal-2026-chillguard,
+    title = "{CHILLG}uard: Towards Fine-Grained {C}hinese {LLM} Safety Guardrail with Scalable Data Construction and Model-aware Preference Alignment",
+    author = "Yu, Wenbo  and
+      Wang, Bohua  and
+      Fang, Hao  and
+      Gao, Kuofeng  and
+      Zeng, Jingru  and
+      Yang, Xiaochen  and
+      Zhang, Tianyi  and
+      Ma, Xiaoxiao  and
+      Kong, Jiawei  and
+      Wu, Hao  and
+      Chen, Bin  and
+      Xia, Shu-Tao  and
+      Zhang, Min",
+    editor = "Lee, Hung-Yi  and
+      Dev, Sunipa  and
+      Li, Jessy  and
+      Elliott, Desmond",
+    booktitle = "Findings of the {A}ssociation for {C}omputational {L}inguistics: {EMNLP} 2026",
+    month = oct,
+    year = "2026",
+    address = "Budapest, Hungary",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.findings-emnlp.1721/",
+    doi = "10.18653/2026.findings-emnlp.1721",
+    pages = "36802--36827",
+    ISBN = "979-8-89176-462-0"
 }
 ```
