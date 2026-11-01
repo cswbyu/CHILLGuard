@@ -34,11 +34,6 @@ python build_preference_pairs.py \
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-REFUSAL_PHRASES = [
-    "i apologize", "i cannot comply", "i can't fulfill", "as an ai",
-    "我无法", "我不能", "很抱歉", "作为一个人工智能", "无法满足"
-]
-
 cur_status = "iter1"  # set from --status in main()
 
 
@@ -52,7 +47,6 @@ def parse_arguments():
     parser.add_argument('--cls_gpu', type=str, default="0", help='GPU ID(s) for the classifier, single "0" or multiple "0,1"')
     parser.add_argument('--gen_gpu', type=str, default="1", help='GPU ID(s) for the generator / rater')
     parser.add_argument('--gpu_memory_utilization', type=float, default=0.9)
-    parser.add_argument('--max_length_diff', type=int, default=500, help='Maximum character-length difference kept between original and rewritten prompt')
     return parser.parse_args()
 
 
@@ -159,10 +153,6 @@ def run_evaluator_task(model_path, prompts, gpu_id, mem_util):
             scores.append(1)  # unratable responses default to the lowest quality score
     return scores
 
-def has_refusal(text: str) -> bool:
-    text_lower = text.lower()
-    return any(phrase in text_lower for phrase in REFUSAL_PHRASES)
-
 def determine_level(original_label: str, eval_score: int, classifier_pred: str) -> int:
     """Map (gold label, generator quality score, classifier prediction) to the
     difficulty levels L1-L4 of paper Eq. 8.
@@ -238,8 +228,6 @@ def main():
         orig_p = item.get("original_prompt", "")
         aug_p = item.get("augmented_prompt", "")
 
-        if abs(len(orig_p) - len(aug_p)) > args.max_length_diff: continue
-        if has_refusal(aug_p): continue
 
         item["level"] = determine_level(item["label"], item["eval_score"], item["classifier_pred"])
         grouped_candidates[item["id"]].append(item)

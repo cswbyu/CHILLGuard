@@ -1,6 +1,6 @@
 """Shared prompt-engineering (PE) rewriting templates of the generator.
 
-These templates are part of the method (paper Sec. 4.3 / Appendix C-D) and are
+These templates are part of the method (paper Sec. 4.3 / Appendix D.1) and are
 intentionally kept in Chinese. All training and data-construction scripts
 import the templates from this single module so the wording stays consistent
 across the whole pipeline.
