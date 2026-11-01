@@ -1,6 +1,6 @@
 {
     "model_id": "./models/Dolphin3.0-Llama3.1-8B",
-    "train_file": "./data/iter1_dpo_pairs.jsonl",
+    "train_file": "./data/iter2_pairs/iter2_dpo_pairs.jsonl",
     "output_dir": "./outputs/generator",
     "output_model_name": "generator-iter2-mdpo",
     "dtype": "bfloat16",

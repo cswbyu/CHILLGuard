@@ -18,14 +18,13 @@ from templates import get_prompts
 # accelerate launch --num_processes=1 --gpu_ids 0 dpo_lora_trainer.py 2>&1 | tee dpo_lora.log
 # CUDA_VISIBLE_DEVICES=1 python dpo_lora_trainer.py 2>&1 | tee output.log
 #
-# LoRA variant of the standard DPO baseline (ablation, Table 3 of the paper).
+# Static-beta DPO baseline of the generator (ablation CHILLGuard‡, Table 3 of the paper):
+# identical to mdpo_trainer.py (same data, LoRA and hyper-parameters, see
+# configs/dpo_config.json vs configs/mdpo_config.json) except that the KL coefficient beta stays fixed.
 
 def load_config(config_path):
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = json.load(f)
-
-    if isinstance(config_data, dict) and "dpo_lora" in config_data:
-        return config_data["dpo_lora"]
 
     return config_data
 

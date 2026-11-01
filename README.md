@@ -131,7 +131,7 @@ All pipeline stages exchange JSONL files with the following schemas:
 | Seed prompts (input to `data_gen.py`) | `seed_train.jsonl` | `id`, `prompt`, `category`, `label`（安全/不安全）, `source` |
 | Generator output (`data_gen.py`) | `gen.jsonl` | `id`, `original_prompt`, `augmented_prompt`, `category`, `label`, `source`, `candidate_index` |
 | Preference pairs (`build_preference_pairs.py`) | `*_dpo_pairs.jsonl` | `prompt`, `seed_prompt`, `chosen`, `rejected`, `original_label` |
-| Hard samples (`build_preference_pairs.py`) | `*_level1.jsonl` | generation record + `classifier_pred`, `eval_score`, `level` |
+| Scoring log (`build_preference_pairs.py`) | `*_build_log.jsonl` | generation record + `classifier_pred`, `eval_score`, `level` (L1-L4, Eq. 8) |
 | Next-iteration training set (`aggregate_train_set.py`) | `train.jsonl` | `id`, `prompt`, `category`, `label`, `source` |
 | Released datasets | `CHILLGuardTest.json` / `CHILLGuardTrain-Subset-15K.json` | `id`, `prompt`, `safety`（safe/unsafe）, `category` |
 
@@ -190,7 +190,7 @@ python classifier/sft_trainer.py                    # train_file: ./data/final_t
 
 The classifier is trained with full-parameter SFT (`classifier/sft_trainer.py`, paper setting); `classifier/lora_sft_trainer.py` + `classifier/lora_merge.py` are provided as a memory-efficient alternative. MDPO uses a per-device batch of |B| = 16 (paper Table 9), so the outlier filtering keeps K = 12 of 16 instances per step.
 
-Configurations for every stage are provided in [`configs/`](configs/) (including the DeepSpeed ZeRO-3 config and the static-beta DPO baselines used in the paper's ablations).
+Configurations for every stage are provided in [`configs/`](configs/) (including the DeepSpeed ZeRO-3 config and the static-beta DPO baseline of the CHILLGuard‡ ablation, Table 3: identical to MDPO except that β stays fixed).
 
 ## 📁 Repository Structure
 
@@ -202,12 +202,11 @@ CHILLGuard/
 │   ├── clean_generated_text.py      # Format normalization
 │   ├── sample_candidates.py         # Keep k=4 candidates per seed
 │   ├── build_preference_pairs.py    # L1-L4 grading + MDPO pairs (Eq. 8-9)
-│   ├── extract_misclassified.py     # Mine classifier blind spots
 │   └── aggregate_train_set.py       # Assemble next-iteration training set
 ├── generator/               # Generator training (Dolphin3.0-Llama3.1-8B base)
 │   ├── data_gen.py                  # Multi-GPU candidate generation (k=4)
 │   ├── mdpo_trainer.py              # Model-aware DPO (Sec. 4.2)
-│   └── dpo_trainer.py / dpo_lora_trainer.py   # Static-beta DPO baselines
+│   └── dpo_lora_trainer.py          # Static-beta DPO baseline (CHILLGuard‡, Table 3)
 ├── classifier/              # Guardrail classifier training (Qwen3 base)
 │   ├── sft_trainer.py / lora_sft_trainer.py
 │   ├── lora_merge.py

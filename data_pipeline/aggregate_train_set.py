@@ -8,23 +8,20 @@ import random
 # --raw_data must be the generator's own output (JSONL rows with an
 # `augmented_prompt` field); do NOT pass a preference-pairs file here.
 #
-# Example:
+# Example (final iteration):
 # python aggregate_train_set.py \
-#   --raw_data ./data/iter2_gen_mdpo.jsonl \
-#   --keep_data ./data/iter1_level1.jsonl \
+#   --raw_data ./data/iter2_gen.jsonl \
 #   --seed_data ./data/seed_train.jsonl \
-#   --output ./data/iter2_train.jsonl
-parser = argparse.ArgumentParser(description="Merge generated, level-1 and seed data into the next classifier training set")
+#   --raw_source_tag gen_iter2 \
+#   --output ./data/final_train.jsonl
+parser = argparse.ArgumentParser(description="Merge the generator output D_gen(t) with the seed set D_train(0) into the classifier training set (paper Sec. 4.3)")
 parser.add_argument("--raw_data", type=str, required=True, help="Augmented data produced by the generator in this iteration")
-parser.add_argument("--keep_data", type=str, default=None, help="Optional: level-1 (hard) samples kept from the previous iteration (not used in the paper setting)")
 parser.add_argument("--seed_data", type=str, required=True, help="Seed training set JSONL")
 parser.add_argument("--raw_source_tag", type=str, default="gen_iter2", help="Source tag recorded for --raw_data rows")
-parser.add_argument("--keep_source_tag", type=str, default="gen_iter1", help="Source tag recorded for --keep_data rows")
 parser.add_argument("--output", type=str, required=True, help="Output path of the assembled training set")
 _args = parser.parse_args()
 
 raw_data_path = _args.raw_data
-keep_data_path = _args.keep_data
 seed_data_path = _args.seed_data
 output_path = _args.output
 
@@ -56,28 +53,7 @@ print(f"[*] Read {len(all_data)} records from raw_data.")
 # Track the running total to report per-file counts
 current_len = len(all_data)
 
-# 2. Read keep_data (optional; not part of the paper setting)
-if keep_data_path:
-    with open(keep_data_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, start=1):
-            line = line.strip()
-            if line:
-                try:
-                    item = json.loads(line)
-                    for it in (item if isinstance(item, list) else [item]):
-                        all_data.append({
-                            "prompt": it["augmented_prompt"],
-                            "category": it["category"],
-                            "label": it["label"],
-                            "source": _args.keep_source_tag
-                        })
-                except (json.JSONDecodeError, KeyError, TypeError) as e:
-                    print(f"[warn] Skipping unparseable line {line_num} of keep_data: {e}")
-
-    print(f"[*] Read {len(all_data) - current_len} records from keep_data.")
-    current_len = len(all_data)
-
-# 3. Read seed_data
+# 2. Read seed_data
 with open(seed_data_path, 'r', encoding='utf-8') as f:
     for line_num, line in enumerate(f, start=1):
         line = line.strip()
@@ -96,12 +72,12 @@ with open(seed_data_path, 'r', encoding='utf-8') as f:
 
 print(f"[*] Read {len(all_data) - current_len} records from seed_data.")
 
-# 4. Global shuffle
+# 3. Global shuffle
 print(f"[*] Shuffling {len(all_data)} records...")
 random.seed(42)  # fixed seed for reproducibility
 random.shuffle(all_data)
 
-# 5. Re-index and write out
+# 4. Re-index and write out
 print(f"[*] Re-indexing and saving to {output_path}...")
 with open(output_path, 'w', encoding='utf-8') as writer:
     for idx, item in enumerate(all_data, start=1):

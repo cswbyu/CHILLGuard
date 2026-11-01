@@ -106,14 +106,6 @@ def load_config(config_path):
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = json.load(f)
 
-    if isinstance(config_data, dict):
-        if "mdpo_lora" in config_data:
-            return config_data["mdpo_lora"]
-        if "mdpo_base" in config_data:
-            return config_data["mdpo_base"]
-        if "dpo_base" in config_data:
-            return config_data["dpo_base"]
-
     return config_data
 
 def build_dpo_prompt(tokenizer, seed_text: str, is_safe: bool):
@@ -205,7 +197,7 @@ def main():
     if eval_dataset is not None:
         print(f"    - eval samples: {len(eval_dataset)}")
 
-    # Base training hyper-parameters (shared with dpo_trainer.py)
+    # Base training hyper-parameters (shared with the static-beta DPO baseline dpo_lora_trainer.py)
     dpo_kwargs = dict(
         output_dir=config["output_dir"],
         beta=config.get("beta", 0.1),

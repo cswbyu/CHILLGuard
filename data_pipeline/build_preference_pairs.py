@@ -17,16 +17,15 @@ from templates import get_prompts
 Build MDPO preference pairs (paper Sec. 4.3, Eq. 8-9):
 the current classifier labels every generated prompt while the generator rates it,
 the two signals are mapped to difficulty levels L1-L4, and preference pairs are
-formed following the priority rule. Level-1 (hard) samples are also exported as
-incremental training data for the next classifier update.
+formed following the priority rule.
 
 python build_preference_pairs.py \
   --input_file ./data/iter1_gen.jsonl \
   --classifier_model ./checkpoints/classifier_iter1 \
   --generator_model ./models/Dolphin3.0-Llama3.1-8B \
-  --output_dir ./data/iter1_pairs \
-  --status iter1 \
-  --cls_gpu 3 \
+  --output_dir ./data/iter2_pairs \
+  --status iter2 \
+  --cls_gpu 0 \
   --gen_gpu 1 \
   --gpu_memory_utilization 0.6
 '''
@@ -245,14 +244,12 @@ def main():
         item["level"] = determine_level(item["label"], item["eval_score"], item["classifier_pred"])
         grouped_candidates[item["id"]].append(item)
 
-    classifier_new_data, dpo_pairs = [], []
+    dpo_pairs = []
 
     for seed_id, candidates in grouped_candidates.items():
         levels = defaultdict(list)
         for cand in candidates:
             levels[cand["level"]].append(cand)
-            if cand["level"] == 1:
-                classifier_new_data.append(cand)
 
         # Priority rule of paper Eq. 9: <L1,L4> > <L1,L3> > <L2,L4>.
         # Preference pairs require a chosen/rejected candidate from the listed
@@ -285,17 +282,13 @@ def main():
         for item in raw_data:
             f.write(json.dumps(item, ensure_ascii=False) + '\n')
 
-    with open(output_dir / f"{cur_status}_level1.jsonl", 'w', encoding='utf-8') as f:
-        for item in classifier_new_data:
-            f.write(json.dumps(item, ensure_ascii=False) + '\n')
-
     with open(output_dir / f"{cur_status}_dpo_pairs.jsonl", 'w', encoding='utf-8') as f:
         for item in dpo_pairs:
             f.write(json.dumps(item, ensure_ascii=False) + '\n')
 
     logging.info(f"Pipeline finished!")
     logging.info(f"Saved {len(raw_data)} fully scored samples to: {cur_status}_build_log.jsonl")
-    logging.info(f"Saved {len(classifier_new_data)} classifier-update samples and {len(dpo_pairs)} DPO pairs.")
+    logging.info(f"Saved {len(dpo_pairs)} DPO pairs to: {cur_status}_dpo_pairs.jsonl")
 
 if __name__ == "__main__":
     main()
