@@ -30,12 +30,10 @@ python build_preference_pairs.py \
   --gpu_memory_utilization 0.6
 '''
 
-
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 cur_status = "iter1"  # set from --status in main()
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Parallel CHILLGuard Data Pipeline")
@@ -48,7 +46,6 @@ def parse_arguments():
     parser.add_argument('--gen_gpu', type=str, default="1", help='GPU ID(s) for the generator / rater')
     parser.add_argument('--gpu_memory_utilization', type=float, default=0.9)
     return parser.parse_args()
-
 
 def parse_gpu_ids(gpu_ids: str) -> list:
     ids = [x.strip() for x in str(gpu_ids).split(',') if x.strip()]
@@ -216,18 +213,14 @@ def main():
         scores = future_eval.result()
 
     # ==========================================
-    # Cleaning, difficulty rating and pair construction
+    # Difficulty grading (Eq. 8) and pair construction (Eq. 9)
     # ==========================================
-    logging.info("Inference done; cleaning data and building preference pairs...")
+    logging.info("Inference done; grading samples (Eq. 8) and building preference pairs (Eq. 9)...")
     grouped_candidates = defaultdict(list)
 
     for i, item in enumerate(raw_data):
         item["classifier_pred"] = predictions[i]
         item["eval_score"] = scores[i]
-
-        orig_p = item.get("original_prompt", "")
-        aug_p = item.get("augmented_prompt", "")
-
 
         item["level"] = determine_level(item["label"], item["eval_score"], item["classifier_pred"])
         grouped_candidates[item["id"]].append(item)
