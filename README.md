@@ -139,52 +139,56 @@ All pipeline stages exchange JSONL files with the following schemas:
 
 ## 🏋️ Training
 
-The generator–classifier framework trains the two models collaboratively over multiple iterations. Each iteration runs the following stages (see the paper, Sec. 4.3):
+The generator–classifier collaborative framework runs three iterations (paper Sec. 4.3). `D_train(0)` is the seed set (CHILLGuardTrain), `G(0)` is the uncensored Dolphin3.0-Llama3.1-8B rewriting generator, and the classifier is fine-tuned from the Qwen3 base model from scratch in every iteration. `classifier/sft_trainer.py` reads `configs/sft_config.json`; set its `train_file` for each iteration.
 
 ```bash
-# 1. Generate k=4 rewritten candidates per seed prompt (multi-GPU data parallel)
-python generator/data_gen.py --gpus 0,7 --gpu_use 0.47 \
-    --model_path ./checkpoints/generator_iter1 \
-    --input_file ./data/seed_train.jsonl \
-    --output_file ./data/iter2_gen.jsonl
+# ===== Iteration 0: classifier C(0) on the seed set D_train(0) =====
+python classifier/sft_trainer.py                    # train_file: ./data/seed_train.jsonl  -> C(0)
 
-# 2. Strip generation-template prefixes (format normalization)
-python data_pipeline/clean_generated_text.py \
-    --input ./data/iter2_gen.jsonl --output ./data/iter2_gen_cleaned.jsonl
+# ===== Iteration 1: G(0) rewrites every seed prompt (n=4) -> D_gen(1); classifier C(1) =====
+python generator/data_gen.py --gpus 0,1 --gpu_use 0.47 \
+    --model_path ./models/Dolphin3.0-Llama3.1-8B \
+    --input_file ./data/seed_train.jsonl --output_file ./data/iter1_gen_raw.jsonl
+python data_pipeline/clean_generated_text.py --input ./data/iter1_gen_raw.jsonl --output ./data/iter1_gen_clean.jsonl
+python data_pipeline/sample_candidates.py --input ./data/iter1_gen_clean.jsonl --output ./data/iter1_gen.jsonl --num 4
 
-# 3. Keep exactly 4 candidates per (id, original_prompt) group
-python data_pipeline/sample_candidates.py \
-    --input ./data/iter2_gen_cleaned.jsonl --output ./data/iter2_gen_4aug.jsonl --num 4
+# D_train(1) = D_train(0) U D_gen(1)
+python data_pipeline/aggregate_train_set.py --raw_data ./data/iter1_gen.jsonl \
+    --seed_data ./data/seed_train.jsonl --raw_source_tag gen_iter1 --output ./data/iter1_train.jsonl
+python classifier/sft_trainer.py                    # train_file: ./data/iter1_train.jsonl -> C(1)
 
-# 4. Build MDPO preference pairs + mine level-1 hard samples
-#    (concurrent classifier and safety-rater inference on separate GPUs)
+# ===== Iteration 2: MDPO on the generator; final classifier C(2) =====
+# C(1) labels D_gen(1), G(0) rates each rewrite's quality (1-5);
+# samples are graded L1-L4 (Eq. 8) and paired by the priority rule (Eq. 9) -> P(2)
 python data_pipeline/build_preference_pairs.py \
-    --input_file ./data/iter2_gen_4aug.jsonl \
+    --input_file ./data/iter1_gen.jsonl \
     --classifier_model ./checkpoints/classifier_iter1 \
     --generator_model ./models/Dolphin3.0-Llama3.1-8B \
-    --output_dir ./data/iter1_pairs --status iter1 \
-    --cls_gpu 3 --gen_gpu 1 --gpu_memory_utilization 0.6
+    --output_dir ./data/iter2_pairs --status iter2 \
+    --cls_gpu 0 --gen_gpu 1 --gpu_memory_utilization 0.6
 
-# 5. Train the generator with Model-aware DPO (MDPO)
+# Fine-tune G(0) on P(2) with MDPO -> G(1)
+# (configs/mdpo_config.json: train_file = ./data/iter2_pairs/iter2_dpo_pairs.jsonl)
 python generator/mdpo_trainer.py
 
-# 6. Assemble the next classifier training set
-python data_pipeline/aggregate_train_set.py \
-    --raw_data ./data/iter1_pairs/iter1_dpo_pairs.jsonl \
-    --keep_data ./data/iter1_pairs/iter1_level1.jsonl \
-    --seed_data ./data/seed_train.jsonl \
-    --output ./data/iter2_train.jsonl
-
-# 7. Fine-tune the next classifier (full-parameter SFT or LoRA)
-python classifier/sft_trainer.py          # full-parameter
-python classifier/lora_sft_trainer.py --config ./configs/sft_config.json --multi_gpu
-
-# 8. Merge the LoRA adapter into the base model
+# Merge the generator LoRA adapter (mdpo_config: use_lora=true) for vLLM generation
 python classifier/lora_merge.py \
-    --base_model_path ./models/Qwen3-8B \
-    --lora_model_path ./outputs/classifier/lora \
-    --output_merged_path ./checkpoints/classifier_iter2
+    --base_model_path ./models/Dolphin3.0-Llama3.1-8B \
+    --lora_model_path ./outputs/generator/generator-iter2-mdpo \
+    --output_merged_path ./checkpoints/generator_iter1
+
+# G(1) generates D_gen(2); D_train(2) = D_train(0) U D_gen(2)
+python generator/data_gen.py --gpus 0,1 --gpu_use 0.47 \
+    --model_path ./checkpoints/generator_iter1 \
+    --input_file ./data/seed_train.jsonl --output_file ./data/iter2_gen_raw.jsonl
+python data_pipeline/clean_generated_text.py --input ./data/iter2_gen_raw.jsonl --output ./data/iter2_gen_clean.jsonl
+python data_pipeline/sample_candidates.py --input ./data/iter2_gen_clean.jsonl --output ./data/iter2_gen.jsonl --num 4
+python data_pipeline/aggregate_train_set.py --raw_data ./data/iter2_gen.jsonl \
+    --seed_data ./data/seed_train.jsonl --raw_source_tag gen_iter2 --output ./data/final_train.jsonl
+python classifier/sft_trainer.py                    # train_file: ./data/final_train.jsonl -> C(2) = CHILLGuard
 ```
+
+The classifier is trained with full-parameter SFT (`classifier/sft_trainer.py`, paper setting); `classifier/lora_sft_trainer.py` + `classifier/lora_merge.py` are provided as a memory-efficient alternative. MDPO uses a per-device batch of |B| = 16 (paper Table 9), so the outlier filtering keeps K = 12 of 16 instances per step.
 
 Configurations for every stage are provided in [`configs/`](configs/) (including the DeepSpeed ZeRO-3 config and the static-beta DPO baselines used in the paper's ablations).
 

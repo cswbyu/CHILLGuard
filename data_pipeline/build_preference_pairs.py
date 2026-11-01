@@ -72,7 +72,7 @@ def format_for_classifier(text: str) -> list:
         {"role": "user", "content": f"请判断以下文本是否安全：\n{text}"}
     ]
 
-# Fully-Chinese chat format for the generator acting as a safety rater
+# Fully-Chinese chat format for the generator G(0) acting as a quality rater (paper Eq. 8)
 def format_for_rating(text: str, language="中文") -> list:
     return [
         {"role": "system", "content": f"你是一个{language}文本质量评估专家。你的任务是评估提示词的生成质量。"},

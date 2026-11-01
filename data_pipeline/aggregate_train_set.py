@@ -3,8 +3,10 @@ import json
 import random
 
 # Assemble the training set of the next classifier iteration (paper Sec. 4.3):
-# current-iteration generated data + level-1 (hard) samples of the previous
-# iteration + seed data, globally shuffled and re-indexed.
+# D_train(t) = D_train(0) U D_gen(t) — the seed set merged with the current
+# iteration's generator output, globally shuffled and re-indexed.
+# --raw_data must be the generator's own output (JSONL rows with an
+# `augmented_prompt` field); do NOT pass a preference-pairs file here.
 #
 # Example:
 # python aggregate_train_set.py \
@@ -14,7 +16,7 @@ import random
 #   --output ./data/iter2_train.jsonl
 parser = argparse.ArgumentParser(description="Merge generated, level-1 and seed data into the next classifier training set")
 parser.add_argument("--raw_data", type=str, required=True, help="Augmented data produced by the generator in this iteration")
-parser.add_argument("--keep_data", type=str, required=True, help="Level-1 (hard) samples kept from the previous iteration")
+parser.add_argument("--keep_data", type=str, default=None, help="Optional: level-1 (hard) samples kept from the previous iteration (not used in the paper setting)")
 parser.add_argument("--seed_data", type=str, required=True, help="Seed training set JSONL")
 parser.add_argument("--raw_source_tag", type=str, default="gen_iter2", help="Source tag recorded for --raw_data rows")
 parser.add_argument("--keep_source_tag", type=str, default="gen_iter1", help="Source tag recorded for --keep_data rows")
@@ -46,30 +48,34 @@ with open(raw_data_path, 'r', encoding='utf-8') as f:
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 print(f"[warn] Skipping unparseable line {line_num} of raw_data: {e}")
 
+if not all_data:
+    raise SystemExit("[error] No usable records in --raw_data; expected generator output with an `augmented_prompt` field.")
+
 print(f"[*] Read {len(all_data)} records from raw_data.")
 
 # Track the running total to report per-file counts
 current_len = len(all_data)
 
-# 2. Read keep_data
-with open(keep_data_path, 'r', encoding='utf-8') as f:
-    for line_num, line in enumerate(f, start=1):
-        line = line.strip()
-        if line:
-            try:
-                item = json.loads(line)
-                for it in (item if isinstance(item, list) else [item]):
-                    all_data.append({
-                        "prompt": it["augmented_prompt"],
-                        "category": it["category"],
-                        "label": it["label"],
-                        "source": _args.keep_source_tag
-                    })
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                print(f"[warn] Skipping unparseable line {line_num} of keep_data: {e}")
+# 2. Read keep_data (optional; not part of the paper setting)
+if keep_data_path:
+    with open(keep_data_path, 'r', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, start=1):
+            line = line.strip()
+            if line:
+                try:
+                    item = json.loads(line)
+                    for it in (item if isinstance(item, list) else [item]):
+                        all_data.append({
+                            "prompt": it["augmented_prompt"],
+                            "category": it["category"],
+                            "label": it["label"],
+                            "source": _args.keep_source_tag
+                        })
+                except (json.JSONDecodeError, KeyError, TypeError) as e:
+                    print(f"[warn] Skipping unparseable line {line_num} of keep_data: {e}")
 
-print(f"[*] Read {len(all_data) - current_len} records from keep_data.")
-current_len = len(all_data)
+    print(f"[*] Read {len(all_data) - current_len} records from keep_data.")
+    current_len = len(all_data)
 
 # 3. Read seed_data
 with open(seed_data_path, 'r', encoding='utf-8') as f:

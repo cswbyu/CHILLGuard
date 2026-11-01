@@ -7,11 +7,10 @@ vllm>=0.16.0
 torch
 
 # [Training stack] — required by the data pipeline and trainer scripts.
-# NOTE: the exact trl/peft/accelerate versions of the original training runs
-# were not recorded; the code targets the TRL API of the transformers>=5.3
-# era (SFTConfig/DPOConfig with processing_class=, max_length=).
+# NOTE: the trainers target the TRL >= 0.29 API (tested with trl 0.29.1 and
+# 1.17.1 on transformers 5.3.0).
 datasets
 accelerate
-trl
+trl>=0.29
 peft
 tqdm

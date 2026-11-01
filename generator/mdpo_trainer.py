@@ -2,7 +2,6 @@ import os
 import json
 import torch
 import torch.nn.functional as F
-from contextlib import nullcontext
 from typing import Dict, Optional
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -17,7 +16,7 @@ from templates import get_prompts
 # CUDA_VISIBLE_DEVICES=7 python mdpo_trainer.py
 # Custom MDPOTrainer: DPO with the model-aware dynamic KL penalty (MDPO, paper Sec. 4.2).
 class MDPOTrainer(DPOTrainer):
-    def __init__(self, *args, gamma=0.9, K=6, **kwargs):
+    def __init__(self, *args, gamma=0.9, K=12, **kwargs):
         # Extract MDPO hyper-parameters from the training config
         super().__init__(*args, **kwargs)
         self.beta_base = self.args.beta
@@ -28,129 +27,54 @@ class MDPOTrainer(DPOTrainer):
         )
         self.current_dynamic_beta = self.beta_base
 
-    def get_batch_logps(self, logits, labels, average_log_prob=False):
-        """Compute log probabilities for the given labels."""
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        log_probs = F.log_softmax(shift_logits, dim=-1)
-        per_token_logps = torch.gather(log_probs, dim=2, index=shift_labels.unsqueeze(2).clamp(min=0)).squeeze(2)
-        mask = (shift_labels != -100)
-        per_token_logps = per_token_logps * mask
-        if average_log_prob:
-            return per_token_logps.sum(-1) / mask.sum(-1)
-        return per_token_logps.sum(-1)
+    @staticmethod
+    def _per_token_logps(logits, labels):
+        """log softmax(logits)[labels], computed row by row for half precision to bound memory."""
+        if logits.dtype in (torch.float32, torch.float64):
+            return torch.gather(logits, -1, labels.unsqueeze(-1)).squeeze(-1) - torch.logsumexp(logits, dim=-1)
+        rows = []
+        for row_logits, row_labels in zip(logits, labels):
+            row_logps = F.log_softmax(row_logits, dim=-1)
+            rows.append(row_logps.gather(-1, row_labels.unsqueeze(-1)).squeeze(-1))
+        return torch.stack(rows)
 
-    def compute_loss(self, model, inputs, num_items_in_batch=None, return_outputs=False):
-        """
-        Core MDPO loss (DPO + model-aware dynamic KL weighting).
-        """
+    def _sequence_logps(self, model, inputs):
+        """log pi(y|x) (Eq. 1): prompt x conditions the model; log-probs summed over response tokens y only.
+        TRL (>= 0.29) collates input_ids = [x + y_w ; x + y_l] with `completion_mask` marking y."""
+        input_ids = inputs["input_ids"]
+        logits = model(input_ids=input_ids, attention_mask=inputs["attention_mask"], use_cache=False).logits
+        per_token_logps = self._per_token_logps(logits[:, :-1, :], input_ids[:, 1:])
+        response_mask = inputs["completion_mask"][:, 1:].to(per_token_logps.dtype)
+        return (per_token_logps * response_mask).sum(-1)
 
-        # ===== Build labels: mask out padding tokens =====
-        def build_labels(input_ids, attention_mask):
-            labels = input_ids.clone()
-            labels[attention_mask == 0] = -100
-            return labels
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        """Core MDPO loss (paper Sec. 4.2, Eq. 1-7). B is the per-device batch."""
+        policy_chosen_logps, policy_rejected_logps = self._sequence_logps(model, inputs).chunk(2, dim=0)
+        if "ref_chosen_logps" in inputs and "ref_rejected_logps" in inputs:
+            ref_chosen_logps, ref_rejected_logps = inputs["ref_chosen_logps"], inputs["ref_rejected_logps"]
+        else:
+            with torch.no_grad():
+                if self.ref_model is not None:
+                    ref_logps = self._sequence_logps(self.ref_model, inputs)
+                else:  # LoRA: reference = base model with the adapter disabled
+                    with self.accelerator.unwrap_model(model).disable_adapter():
+                        ref_logps = self._sequence_logps(model, inputs)
+            ref_chosen_logps, ref_rejected_logps = ref_logps.chunk(2, dim=0)
 
-        # ===== Padding helper: align chosen / rejected seq_len =====
-        def pad_to_max_len(input_ids, attention_mask, max_len, pad_token_id):
-            pad_len = max_len - input_ids.size(1)
-            if pad_len > 0:
-                input_ids = F.pad(input_ids, (0, pad_len), value=pad_token_id)
-                attention_mask = F.pad(attention_mask, (0, pad_len), value=0)
-            return input_ids, attention_mask
-
-        # ===== batch size =====
-        batch_size = inputs["chosen_input_ids"].size(0)
-
-        # Raw inputs
-        chosen_ids = inputs["chosen_input_ids"]
-        rejected_ids = inputs["rejected_input_ids"]
-        chosen_mask = inputs["chosen_attention_mask"]
-        rejected_mask = inputs["rejected_attention_mask"]
-
-        # ===== 1. Align sequence lengths =====
-        max_len = max(chosen_ids.size(1), rejected_ids.size(1))
-        pad_id = self.processing_class.pad_token_id
-
-        chosen_ids, chosen_mask = pad_to_max_len(chosen_ids, chosen_mask, max_len, pad_id)
-        rejected_ids, rejected_mask = pad_to_max_len(rejected_ids, rejected_mask, max_len, pad_id)
-
-        # ===== 2. Build labels =====
-        chosen_labels = build_labels(chosen_ids, chosen_mask)
-        rejected_labels = build_labels(rejected_ids, rejected_mask)
-
-        # Concatenate chosen + rejected into a single forward pass for efficiency
-        all_ids = torch.cat([chosen_ids, rejected_ids], dim=0)
-        all_attention_mask = torch.cat([chosen_mask, rejected_mask], dim=0)
-        all_labels = torch.cat([chosen_labels, rejected_labels], dim=0)
-
-        # ===== 3. Policy model log-probs =====
-        logits = model(all_ids, attention_mask=all_attention_mask).logits
-        all_logps = self.get_batch_logps(logits, all_labels)
-
-        policy_chosen_logps = all_logps[:batch_size]
-        policy_rejected_logps = all_logps[batch_size:]
-
-        # ===== 4. Reference model log-probs (no grad) =====
-        with torch.no_grad():
-            if self.ref_model is not None:
-                ref_logits = self.ref_model(all_ids, attention_mask=all_attention_mask).logits
-            else:
-                # Under LoRA training TRL may not build an explicit ref_model;
-                # obtain the reference distribution with the adapter disabled.
-                if hasattr(self, "null_ref_context"):
-                    ref_ctx = self.null_ref_context()
-                elif hasattr(model, "disable_adapter"):
-                    ref_ctx = model.disable_adapter()
-                else:
-                    ref_ctx = nullcontext()
-
-                with ref_ctx:
-                    ref_logits = model(all_ids, attention_mask=all_attention_mask).logits
-
-            ref_logps = self.get_batch_logps(ref_logits, all_labels)
-            ref_chosen_logps = ref_logps[:batch_size]
-            ref_rejected_logps = ref_logps[batch_size:]
-
-        # ===== 5. Reward gap (preference strength), Eq. 3 =====
-        reward_gaps = self.beta_base * (
-            (policy_chosen_logps - ref_chosen_logps)
-            - (policy_rejected_logps - ref_rejected_logps)
-        )
-
-        # ===== 6. Outlier filtering (Eq. 4-5): keep the K samples closest to the batch center =====
-        normalized_gaps = reward_gaps / (self.running_reward_gap + 1e-8)
-
-        center = normalized_gaps.mean().detach()
-        dist_sq = (normalized_gaps - center) ** 2
-        _, stable_idx = torch.topk(
-            dist_sq, k=min(self.K, batch_size), largest=False
-        )
-        batch_avg_gap = normalized_gaps[stable_idx].mean()
-
-        # ===== 7. Model-aware dynamic beta (Eq. 6) =====
-        alpha_m = torch.sigmoid(batch_avg_gap) / torch.sigmoid(
-            self.running_reward_gap.detach()
-        )
+        logits_diff = (policy_chosen_logps - ref_chosen_logps) - (policy_rejected_logps - ref_rejected_logps)
+        reward_gaps = self.beta_base * logits_diff                                   # Eq. 3
+        global_mean = self.running_reward_gap.detach().to(reward_gaps.device)        # R_bar
+        dist_sq = (reward_gaps.detach() - global_mean) ** 2                          # Eq. 4
+        keep_idx = torch.topk(dist_sq, k=min(self.K, reward_gaps.size(0)), largest=False).indices
+        batch_avg_gap = reward_gaps[keep_idx].mean()                                 # Eq. 5
+        alpha_m = torch.sigmoid(batch_avg_gap) / torch.sigmoid(global_mean)          # Eq. 6
         dynamic_beta = self.beta_base * alpha_m
-
         self.current_dynamic_beta = dynamic_beta.item()
-
-        # ===== 8. DPO loss with the dynamic KL coefficient =====
-        logits_diff = (
-            (policy_chosen_logps - ref_chosen_logps)
-            - (policy_rejected_logps - ref_rejected_logps)
-        )
-        losses = -F.logsigmoid(dynamic_beta * logits_diff)
-
-        # ===== 9. Momentum update of the global reward gap (Eq. 7) =====
-        if model.training:
-            self.running_reward_gap = (
-                self.gamma * self.running_reward_gap
-                + (1 - self.gamma) * batch_avg_gap.detach()
-            )
-
-        return losses.mean()
+        losses = -F.logsigmoid(dynamic_beta * logits_diff)                           # Eq. 2 with beta_M
+        if model.training:                                                           # Eq. 7
+            self.running_reward_gap = self.gamma * global_mean + (1 - self.gamma) * batch_avg_gap.detach()
+        loss = losses.mean()
+        return (loss, {}) if return_outputs else loss
 
     def log(self, logs: Dict[str, float], start_time: Optional[float] = None) -> None:
         """
@@ -298,7 +222,6 @@ def main():
         eval_strategy=eval_strategy,
         logging_steps=config["logging_steps"],
         save_steps=config["save_steps"],
-        max_prompt_length=config.get("max_prompt_length", 512),
         max_length=config.get("max_length", 1024),
         report_to=config.get("report_to", "none"),
         remove_unused_columns=False,

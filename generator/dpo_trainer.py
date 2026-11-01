@@ -55,7 +55,7 @@ def prepare_dataset(train_file, model_id):
     def map_dpo_format(example):
         original_label = example.get("original_label", "").strip()
         is_safe = (original_label == "安全")
-        seed_text = example["prompt"]
+        seed_text = example["seed_prompt"]
 
         return {
             "prompt": build_dpo_prompt(tokenizer, seed_text, is_safe),
@@ -117,7 +117,6 @@ def main():
         save_steps=config["save_steps"],
         report_to=config.get("report_to", "none"),
         gradient_checkpointing=True,
-        max_prompt_length=config.get("max_prompt_length", 512),
         max_length=config.get("max_length", 1024),
         remove_unused_columns=False,
     )

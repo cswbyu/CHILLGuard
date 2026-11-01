@@ -131,7 +131,6 @@ def main():
         report_to=config.get("report_to", "none"),
         gradient_checkpointing=True,
         beta=config.get("beta", config.get("dpo_beta", 0.1)),
-        max_prompt_length=config.get("max_prompt_length", 512),
         max_length=config.get("max_length", 1024),
         remove_unused_columns=False
     )
