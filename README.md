@@ -41,7 +41,7 @@ We introduce a **5-macro, 31-micro** category fine-grained risk taxonomy for Chi
 | Model           | Type         | Base Model | Params | Overall F1 (CHILLGuardTest) | Download |
 | --------------- | ------------ | ---------- | ------ | --------------------------- | -------- |
 | CHILLGuard-1.7B | Safety Guard | Qwen3-1.7B | 1.7B   | 82.72                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-1.7B) · 🧭 [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-1.7B) |
-| CHILLGuard-4B   | Safety Guard | Qwen3-4B   | 4B     | 89.43                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-4B) · 🧭 [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-4B) |
+| CHILLGuard-4B   | Safety Guard | Qwen3-4B-Instruct-2507   | 4B     | 89.43                       | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-4B) · 🧭 [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-4B) |
 | CHILLGuard-8B   | Safety Guard | Qwen3-8B   | 8B     | **89.77**                   | 🤗 [Hugging Face](https://huggingface.co/cswbyu/CHILLGuard-8B) · 🧭 [ModelScope](https://modelscope.cn/models/cswbyu/CHILLGuard-8B) |
 
 CHILLGuard establishes SOTA results across all three parameter scales on CHILLGuardTest. The 8B variant reaches an overall F1 of **89.77**, surpassing the second-best baseline (Qwen3Guard-8B-Strict, 77.44) by a relative improvement of **15.92%**.

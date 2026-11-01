@@ -1,5 +1,5 @@
 {
-    "model_id": "./models/Qwen3-4B",
+    "model_id": "./models/Qwen3-4B-Instruct-2507",
     "dtype": "bfloat16",
     "train_file": "./data/final_train.jsonl",
     "eval_file": "./data/test.json",
