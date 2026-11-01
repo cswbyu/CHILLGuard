@@ -26,6 +26,9 @@ def load_config(config_path):
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = json.load(f)
 
+    if isinstance(config_data, dict) and "dpo_lora" in config_data:
+        return config_data["dpo_lora"]
+
     return config_data
 
 def build_dpo_prompt(tokenizer, seed_text: str, is_safe: bool):
