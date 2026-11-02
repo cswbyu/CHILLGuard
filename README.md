@@ -198,7 +198,7 @@ Configurations for every stage are provided in [`configs/`](configs/) (including
 CHILLGuard/
 ├── assets/                  # Paper figures
 ├── configs/                 # Training configurations (SFT / DPO / MDPO / DeepSpeed)
-├── data_pipeline/           # Data construction and preference-pair pipeline
+├── data_pipeline/           # Generated-data processing and preference-pair pipeline (Sec. 4.3)
 │   ├── clean_generated_text.py      # Format normalization
 │   ├── sample_candidates.py         # Keep k=4 candidates per seed
 │   ├── build_preference_pairs.py    # L1-L4 grading + MDPO pairs (Eq. 8-9)
@@ -212,7 +212,7 @@ CHILLGuard/
 │   ├── lora_merge.py
 │   └── run_lora_sft.sh
 ├── evaluation/
-│   └── eval_f1.py           # Reproduce the Table 2 F1 scores
+│   └── eval_f1.py           # Reproduce the CHILLGuardTest F1 scores (Tables 1-2)
 ├── templates.py             # Shared PE rewriting templates (single source of truth)
 └── requirements.txt
 ```
@@ -238,7 +238,7 @@ Evaluate any released checkpoint on the released benchmark:
 python evaluation/eval_f1.py --model cswbyu/CHILLGuard-8B --file CHILLGuardTest.json --gpu 0
 ```
 
-With the environment above, this reproduces the overall F1 scores of **Table 2** in the paper (82.72 / 89.43 / 89.77).
+With the environment above, this reproduces the CHILLGuardTest F1 scores reported in the paper (82.72 / 89.43 / 89.77; the "Overall" column of Table 1, also the CHILLGuardTest column of Table 2).
 
 ## ⚖️ License
 

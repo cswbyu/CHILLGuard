@@ -7,8 +7,8 @@ from transformers import (
     AutoTokenizer,
 )
 from trl import SFTTrainer, SFTConfig
-# accelerate launch --num_processes=2 --gpu_ids 5,6 sft_trainer.py 2>&1 | tee output.log
-# CUDA_VISIBLE_DEVICES=1 python sft_trainer.py
+# CUDA_VISIBLE_DEVICES=0 python sft_trainer.py   # global batch = 4 x 4 = 16 (paper Table 11)
+# Multi-GPU: keep per_device_train_batch_size x gradient_accumulation_steps x num_processes = 16
 #
 # Full-parameter SFT of the guardrail classifier (paper Sec. 4.1 / 4.3):
 # the classifier is fine-tuned from scratch in every iteration on the

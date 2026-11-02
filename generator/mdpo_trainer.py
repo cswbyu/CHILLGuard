@@ -22,8 +22,10 @@ class MDPOTrainer(DPOTrainer):
         self.beta_base = self.args.beta
         self.gamma = gamma
         self.K = K
+        # Global mean reward gap R_bar starts at 0: at step 0 the policy equals the reference
+        # (all R_i = 0), so alpha_M = 1 and the KL penalty starts at the initial beta (Table 9).
         self.running_reward_gap = torch.tensor(
-            1.0, device=self.args.device
+            0.0, device=self.args.device
         )
         self.current_dynamic_beta = self.beta_base
 
@@ -67,7 +69,7 @@ class MDPOTrainer(DPOTrainer):
         dist_sq = (reward_gaps.detach() - global_mean) ** 2                          # Eq. 4
         keep_idx = torch.topk(dist_sq, k=min(self.K, reward_gaps.size(0)), largest=False).indices
         batch_avg_gap = reward_gaps[keep_idx].mean()                                 # Eq. 5
-        alpha_m = torch.sigmoid(batch_avg_gap) / torch.sigmoid(global_mean)          # Eq. 6
+        alpha_m = torch.sigmoid(batch_avg_gap.detach()) / torch.sigmoid(global_mean) # Eq. 6 (beta_M is a coefficient)
         dynamic_beta = self.beta_base * alpha_m
         self.current_dynamic_beta = dynamic_beta.item()
         losses = -F.logsigmoid(dynamic_beta * logits_diff)                           # Eq. 2 with beta_M
