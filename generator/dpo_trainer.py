@@ -14,10 +14,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from templates import get_prompts
 
-# Launch commands:
 # Static-beta DPO baseline of the generator (ablation CHILLGuard‡, Table 3 of the paper):
 # identical to mdpo_trainer.py (same data and hyper-parameters, see configs/dpo_config.json
 # vs configs/mdpo_config.json) except that the KL coefficient beta stays fixed.
+#
+# Launch: CUDA_VISIBLE_DEVICES=0 python dpo_trainer.py
 # CUDA_VISIBLE_DEVICES=0 python dpo_trainer.py
 # CUDA_VISIBLE_DEVICES=0 python dpo_trainer.py 2>&1 | tee output.log
 #
