@@ -88,6 +88,7 @@ messages = [
     {"role": "user", "content": "请判断以下文本是否安全：\n<待检测文本>"},
 ]
 # NOTE: enable_thinking only takes effect in transformers >= 5.x — keep it False
+# (effective for the 1.7B / 8B templates; the 4B template has no thinking section)
 text = tokenizer.apply_chat_template(
     messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
 )
@@ -96,7 +97,7 @@ text = tokenizer.apply_chat_template(
 inputs = tokenizer([text], return_tensors="pt").to(model.device)
 out = model.generate(**inputs, max_new_tokens=10, do_sample=False)
 
-# 3. Parse: contains「不安全」→ unsafe; else contains「安全」→ safe
+# 3. Parse: contains「不安全」→ unsafe; else contains「安全」→ safe; else → unsafe
 print(tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True))
 ```
 
@@ -135,7 +136,7 @@ All pipeline stages exchange JSONL files with the following schemas:
 | Next-iteration training set (`aggregate_train_set.py`) | `train.jsonl` | `id`, `prompt`, `category`, `label`, `source` |
 | Released datasets | `CHILLGuardTest.json` / `CHILLGuardTrain-Subset-15K.json` | `id`, `prompt`, `safety`（safe/unsafe）, `category` |
 
-> The released files use English `safety` labels (`safe`/`unsafe`); the pipeline's internal files use the Chinese `label`（安全/不安全）.
+> The released files use English `safety` labels (`safe`/`unsafe`); the pipeline's internal files use the Chinese `label`（安全/不安全）— the `label` field is the one shown in the paper's Fig. 1 examples.
 
 ## 🏋️ Training
 
@@ -171,15 +172,10 @@ python data_pipeline/build_preference_pairs.py \
 # (configs/mdpo_config.json: train_file = ./data/iter2_pairs/iter2_dpo_pairs.jsonl)
 python generator/mdpo_trainer.py
 
-# Merge the generator LoRA adapter (mdpo_config: use_lora=true) for vLLM generation
-python classifier/lora_merge.py \
-    --base_model_path ./models/Dolphin3.0-Llama3.1-8B \
-    --lora_model_path ./outputs/generator/generator-iter2-mdpo \
-    --output_merged_path ./checkpoints/generator_iter1
-
 # G(1) generates D_gen(2); D_train(2) = D_train(0) U D_gen(2)
+# (the MDPO output under outputs/generator is a full model, ready for vLLM)
 python generator/data_gen.py --gpus 0,1 --gpu_use 0.47 \
-    --model_path ./checkpoints/generator_iter1 \
+    --model_path ./outputs/generator/generator-iter2-mdpo \
     --input_file ./data/seed_train.jsonl --output_file ./data/iter2_gen_raw.jsonl
 python data_pipeline/clean_generated_text.py --input ./data/iter2_gen_raw.jsonl --output ./data/iter2_gen_clean.jsonl
 python data_pipeline/sample_candidates.py --input ./data/iter2_gen_clean.jsonl --output ./data/iter2_gen.jsonl --num 4
@@ -188,7 +184,7 @@ python data_pipeline/aggregate_train_set.py --raw_data ./data/iter2_gen.jsonl \
 python classifier/sft_trainer.py                    # train_file: ./data/final_train.jsonl -> C(2) = CHILLGuard
 ```
 
-The classifier is trained with full-parameter SFT (`classifier/sft_trainer.py`, paper setting); `classifier/lora_sft_trainer.py` + `classifier/lora_merge.py` are provided as a memory-efficient alternative. MDPO uses a per-device batch of |B| = 16 (paper Table 9), so the outlier filtering keeps K = 12 of 16 instances per step.
+The classifier is trained with full-parameter SFT (`classifier/sft_trainer.py`, paper setting); `classifier/lora_sft_trainer.py` + `classifier/lora_merge.py` are provided as a memory-efficient alternative. The generator is trained with full-parameter MDPO at a global batch of |B| = 16 (paper Table 9), so the outlier filtering keeps K = 12 of 16 instances per step, with the statistics computed over the global batch across cards; multi-card runs can pass a DeepSpeed config through the optional `deepspeed` field of `configs/mdpo_config.json` / `configs/dpo_config.json`.
 
 Configurations for every stage are provided in [`configs/`](configs/) (including the DeepSpeed ZeRO-3 config and the static-beta DPO baseline of the CHILLGuard‡ ablation, Table 3: identical to MDPO except that β stays fixed).
 
@@ -200,13 +196,13 @@ CHILLGuard/
 ├── configs/                 # Training configurations (SFT / DPO / MDPO / DeepSpeed)
 ├── data_pipeline/           # Generated-data processing and preference-pair pipeline (Sec. 4.3)
 │   ├── clean_generated_text.py      # Format normalization
-│   ├── sample_candidates.py         # Keep k=4 candidates per seed
+│   ├── sample_candidates.py         # Keep n=4 candidates per seed
 │   ├── build_preference_pairs.py    # L1-L4 grading + MDPO pairs (Eq. 8-9)
 │   └── aggregate_train_set.py       # Assemble next-iteration training set
 ├── generator/               # Generator training (Dolphin3.0-Llama3.1-8B base)
-│   ├── data_gen.py                  # Multi-GPU candidate generation (k=4)
+│   ├── data_gen.py                  # Multi-GPU candidate generation (n=4)
 │   ├── mdpo_trainer.py              # Model-aware DPO (Sec. 4.2)
-│   └── dpo_lora_trainer.py          # Static-beta DPO baseline (CHILLGuard‡, Table 3)
+│   └── dpo_trainer.py               # Static-beta DPO baseline (CHILLGuard‡, Table 3)
 ├── classifier/              # Guardrail classifier training (Qwen3 base)
 │   ├── sft_trainer.py / lora_sft_trainer.py
 │   ├── lora_merge.py

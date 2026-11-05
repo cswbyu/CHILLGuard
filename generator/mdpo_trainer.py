@@ -6,7 +6,6 @@ from typing import Dict, Optional
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import DPOTrainer, DPOConfig
-from peft import LoraConfig, TaskType
 from accelerate.state import PartialState
 
 # Shared PE rewriting templates (single source of truth in templates.py)
@@ -50,25 +49,29 @@ class MDPOTrainer(DPOTrainer):
         return (per_token_logps * response_mask).sum(-1)
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
-        """Core MDPO loss (paper Sec. 4.2, Eq. 1-7). B is the per-device batch."""
+        """Core MDPO loss (paper Sec. 4.2, Eq. 1-7). B is the global batch (Table 9)."""
         policy_chosen_logps, policy_rejected_logps = self._sequence_logps(model, inputs).chunk(2, dim=0)
         if "ref_chosen_logps" in inputs and "ref_rejected_logps" in inputs:
             ref_chosen_logps, ref_rejected_logps = inputs["ref_chosen_logps"], inputs["ref_rejected_logps"]
         else:
             with torch.no_grad():
-                if self.ref_model is not None:
-                    ref_logps = self._sequence_logps(self.ref_model, inputs)
-                else:  # LoRA: reference = base model with the adapter disabled
-                    with self.accelerator.unwrap_model(model).disable_adapter():
-                        ref_logps = self._sequence_logps(model, inputs)
+                if self.ref_model is None:
+                    raise ValueError("MDPO requires an explicit reference model (full-parameter training).")
+                ref_logps = self._sequence_logps(self.ref_model, inputs)
             ref_chosen_logps, ref_rejected_logps = ref_logps.chunk(2, dim=0)
 
         logits_diff = (policy_chosen_logps - ref_chosen_logps) - (policy_rejected_logps - ref_rejected_logps)
         reward_gaps = self.beta_base * logits_diff                                   # Eq. 3
-        global_mean = self.running_reward_gap.detach().to(reward_gaps.device)        # R_bar
-        dist_sq = (reward_gaps.detach() - global_mean) ** 2                          # Eq. 4
-        keep_idx = torch.topk(dist_sq, k=min(self.K, reward_gaps.size(0)), largest=False).indices
-        batch_avg_gap = reward_gaps[keep_idx].mean()                                 # Eq. 5
+        # Eq. 4-5 statistics are computed over the GLOBAL batch (Table 9: |B| = 16):
+        # gather the reward gaps from all cards before filtering and averaging.
+        if self.accelerator.num_processes > 1:
+            reward_gaps_all = self.accelerator.gather(reward_gaps.detach())
+        else:
+            reward_gaps_all = reward_gaps.detach()
+        global_mean = self.running_reward_gap.detach().to(reward_gaps_all.device)    # R_bar
+        dist_sq = (reward_gaps_all - global_mean) ** 2                               # Eq. 4
+        keep_idx = torch.topk(dist_sq, k=min(self.K, reward_gaps_all.size(0)), largest=False).indices
+        batch_avg_gap = reward_gaps_all[keep_idx].mean()                             # Eq. 5
         alpha_m = torch.sigmoid(batch_avg_gap.detach()) / torch.sigmoid(global_mean) # Eq. 6 (beta_M is a coefficient)
         dynamic_beta = self.beta_base * alpha_m
         self.current_dynamic_beta = dynamic_beta.item()
@@ -175,18 +178,6 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    use_lora = config.get("use_lora", True)
-    lora_config = None
-    if use_lora:
-        lora_config = LoraConfig(
-            r=config.get("lora_r", 16),
-            lora_alpha=config.get("lora_alpha", 32),
-            target_modules=config.get("lora_target_modules", "all-linear"),
-            lora_dropout=config.get("lora_dropout", 0.05),
-            bias=config.get("lora_bias", "none"),
-            task_type=TaskType.CAUSAL_LM,
-        )
-
     train_file = config.get("train_file")
     eval_strategy = config.get("eval_strategy", "no")
     eval_file = config.get("eval_file") if eval_strategy != "no" else None
@@ -199,7 +190,7 @@ def main():
     if eval_dataset is not None:
         print(f"    - eval samples: {len(eval_dataset)}")
 
-    # Base training hyper-parameters (shared with the static-beta DPO baseline dpo_lora_trainer.py)
+    # Base training hyper-parameters (shared with the static-beta DPO baseline dpo_trainer.py)
     dpo_kwargs = dict(
         output_dir=config["output_dir"],
         beta=config.get("beta", 0.1),
@@ -228,6 +219,9 @@ def main():
             "per_device_eval_batch_size", config["per_device_train_batch_size"]
         )
 
+    if config.get("deepspeed"):
+        dpo_kwargs["deepspeed"] = config["deepspeed"]
+
     mdpo_args = DPOConfig(**dpo_kwargs)
 
     # Initialize the MDPO trainer
@@ -237,13 +231,9 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         processing_class=tokenizer,
-        peft_config=lora_config,
         gamma=config.get("gamma", 0.9),
         K=config.get("K", 12),
     )
-
-    if use_lora and hasattr(trainer.model, "print_trainable_parameters"):
-        trainer.model.print_trainable_parameters()
 
     print("[*] Starting MDPO training...")
     trainer.train()

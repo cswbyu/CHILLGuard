@@ -9,7 +9,7 @@ def parse_args():
     parser.add_argument("--base_model_path", type=str, required=True,
                         help="Base model path, e.g. ./models/Qwen3-8B")
     parser.add_argument("--lora_model_path", type=str, required=True,
-                        help="LoRA adapter weights (SFT / MDPO training output)")
+                        help="LoRA adapter weights (lora_sft_trainer.py output)")
     parser.add_argument("--output_merged_path", type=str, required=True,
                         help="Output directory for the merged full model")
     parser.add_argument("--max_memory_per_gpu", type=str, default="48GB",

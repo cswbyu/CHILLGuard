@@ -4,7 +4,7 @@ import random
 
 
 # For each seed (id + original_prompt), keep exactly n of its augmented
-# candidates, so downstream pair construction sees a balanced k=4 grouping.
+# candidates, so downstream pair construction sees a balanced n=4 grouping.
 def flush_group(group_key, records, n, sample_mode, rng, writer):
     if not group_key:
         return

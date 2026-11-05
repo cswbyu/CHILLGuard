@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from templates import get_prompts
 
 # python data_gen.py --gpus 0,7 --gpu_use 0.47 \
-#     --model_path ./checkpoints/generator_iter1 \
+#     --model_path ./outputs/generator/generator-iter2-mdpo \
 #     --input_file ./data/seed_train.jsonl \
 #     --output_file ./data/iter2_gen.jsonl
 
@@ -35,7 +35,7 @@ def worker_process(gpu_id: str, gpu_use: float, items_chunk: list, queue: mp.Que
         gpu_memory_utilization=gpu_use,
         max_model_len=20480
     )
-    # Sampling strategy aligned with the paper: k=4 candidates per seed prompt
+    # Sampling strategy aligned with the paper: n=4 candidates per seed prompt (Table 10)
     sampling_params = SamplingParams(temperature=0.7, n=4, max_tokens=2048)
 
     # Format prompts

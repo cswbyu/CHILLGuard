@@ -107,11 +107,14 @@ def run_classifier_task(model_path, prompts, gpu_id, mem_util):
     predictions = []
     for out in outputs:
         text = out.outputs[0].text.strip()
-        # Tolerant parsing: any mention of "unsafe"/"dangerous" means a negative label
-        if "不安全" in text or "危险" in text:
+        # Label parsing consistent with evaluation/eval_f1.py and the dataset cards:
+        # "不安全" -> unsafe; otherwise "安全" -> safe; anything else -> unsafe.
+        if "不安全" in text:
             predictions.append("不安全")
-        else:
+        elif "安全" in text:
             predictions.append("安全")
+        else:
+            predictions.append("不安全")
     return predictions
 
 # ==========================================
