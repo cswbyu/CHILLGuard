@@ -121,7 +121,7 @@ llm = LLM(model=model_id, dtype="bfloat16", max_model_len=2048, gpu_memory_utili
 outputs = llm.generate(chat_prompts, SamplingParams(temperature=0, max_tokens=10))
 ```
 
-> **Note**: the bundled chat template relies on the `enable_thinking` argument, which only takes effect in **transformers ≥ 5.x**. Always pass `enable_thinking=False`; on older versions it is silently ignored and classification degrades.
+> **Note**: the bundled chat templates of CHILLGuard-1.7B and CHILLGuard-8B rely on the `enable_thinking` argument, which only takes effect in **transformers ≥ 5.x**. Always pass `enable_thinking=False`; on older versions it is silently ignored and classification degrades. (The CHILLGuard-4B template has no thinking section.)
 
 ## 🗃️ Data Format
 
@@ -136,7 +136,7 @@ All pipeline stages exchange JSONL files with the following schemas:
 | Next-iteration training set (`aggregate_train_set.py`) | `train.jsonl` | `id`, `prompt`, `category`, `label`, `source` |
 | Released datasets | `CHILLGuardTest.json` / `CHILLGuardTrain-Subset-15K.json` | `id`, `prompt`, `safety`（safe/unsafe）, `category` |
 
-> The released files use English `safety` labels (`safe`/`unsafe`); the pipeline's internal files use the Chinese `label`（安全/不安全）— the `label` field is the one shown in the paper's Fig. 1 examples.
+> The released files use English `safety` labels (`safe`/`unsafe`); the pipeline's internal files use the Chinese `label`（安全/不安全）— the `label` values shown in the paper's Fig. 1 examples (`safe`/`unsafe`) correspond to the released `safety` field.
 
 ## 🏋️ Training
 
@@ -184,7 +184,7 @@ python data_pipeline/aggregate_train_set.py --raw_data ./data/iter2_gen.jsonl \
 python classifier/sft_trainer.py                    # train_file: ./data/final_train.jsonl -> C(2) = CHILLGuard
 ```
 
-The classifier is trained with full-parameter SFT (`classifier/sft_trainer.py`, paper setting); `classifier/lora_sft_trainer.py` + `classifier/lora_merge.py` are provided as a memory-efficient alternative. The generator is trained with full-parameter MDPO at a global batch of |B| = 16 (paper Table 9), so the outlier filtering keeps K = 12 of 16 instances per step, with the statistics computed over the global batch across cards; multi-card runs can pass a DeepSpeed config through the optional `deepspeed` field of `configs/mdpo_config.json` / `configs/dpo_config.json`.
+The classifier is trained with full-parameter SFT (`classifier/sft_trainer.py`, paper setting); `classifier/lora_sft_trainer.py` + `classifier/lora_merge.py` are provided as a memory-efficient alternative. The generator is trained with full-parameter MDPO at a global batch of |B| = 16 (paper Table 9), so the outlier filtering keeps K = 12 of 16 instances per step, with the statistics computed over the global batch across cards; when running on N cards, keep `per_device_train_batch_size` × `num_processes` = 16 so the global batch matches Table 9; multi-card runs can pass a DeepSpeed config through the optional `deepspeed` field of `configs/mdpo_config.json` / `configs/dpo_config.json`.
 
 Configurations for every stage are provided in [`configs/`](configs/) (including the DeepSpeed ZeRO-3 config and the static-beta DPO baseline of the CHILLGuard‡ ablation, Table 3: identical to MDPO except that β stays fixed).
 
@@ -226,7 +226,7 @@ Results in the paper use the following setup:
 | Sampling      | temperature 0 (greedy), max_tokens 10    |
 | Metric        | F1 with `unsafe` as the positive class |
 
-> The bundled chat template relies on the `enable_thinking` argument, which only takes effect in **transformers ≥ 5.x** — always pass `enable_thinking=False`.
+> The bundled chat templates of CHILLGuard-1.7B and CHILLGuard-8B rely on the `enable_thinking` argument, which only takes effect in **transformers ≥ 5.x** — always pass `enable_thinking=False` (no effect on the CHILLGuard-4B template).
 
 Evaluate any released checkpoint on the released benchmark:
 

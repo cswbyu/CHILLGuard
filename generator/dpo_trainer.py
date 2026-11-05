@@ -102,6 +102,7 @@ def main():
     dpo_args = DPOConfig(
         output_dir=config["output_dir"],
         beta=config.get("beta", 0.1),
+        deepspeed=config.get("deepspeed"),
         num_train_epochs=config["num_train_epochs"],
         per_device_train_batch_size=config["per_device_train_batch_size"],
         gradient_accumulation_steps=config["gradient_accumulation_steps"],
